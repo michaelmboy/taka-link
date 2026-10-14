@@ -1,0 +1,46 @@
+databases:
+  - name: takalink-db
+    plan: free
+    databaseName: takalink
+    user: takalink
+
+services:
+  - type: web
+    name: takalink-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: takalink-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: FRONTEND_ORIGIN
+        value: https://takalink-web.onrender.com
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: COOKIE_SAMESITE
+        value: none
+      - key: PYTHON_VERSION
+        value: 3.12.7
+
+  - type: web
+    name: takalink-web
+    runtime: node
+    plan: free
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        fromService:
+          type: web
+          name: takalink-api
+          property: host
+      - key: NODE_VERSION
+        value: 22.14.0
